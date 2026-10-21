@@ -1,0 +1,16 @@
+{
+  "name": "ieruu-pae-tests",
+  "private": true,
+  "type": "module",
+  "description": "Pruebas del panel del PAE. No forman parte de lo que se publica en Vercel.",
+  "scripts": {
+    "test:query": "node --test query.test.mjs export.test.mjs",
+    "test:rules": "firebase emulators:exec --only database --project demo-pae \"node --test --test-concurrency=1 rules-pae.test.mjs rules-llegadas.test.mjs\"",
+    "test": "npm run test:query && npm run test:rules"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.32.1"
+  }
+}

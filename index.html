@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e5631">
+  <title>IERUU · Almuerzo PAE</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section id="loginView" class="login-view" aria-labelledby="loginTitle">
+      <div class="login-card">
+        <img class="login-logo" src="logo-ieruu.png" alt="Escudo de la Institución Educativa Rafael Uribe Uribe" width="105" height="120">
+        <p class="eyebrow">IERUU · PAE · Comida Caliente Transportada</p>
+        <h1 id="loginTitle">Asistencia al almuerzo</h1>
+        <p class="intro">Registra quién almorzó en el restaurante escolar y descarga la planilla de cada grupo.</p>
+
+        <form id="loginForm" class="stack-form">
+          <label>
+            <span>Correo institucional</span>
+            <input id="emailInput" name="email" type="email" autocomplete="email" required placeholder="nombre@ieruu.edu.co">
+          </label>
+          <label>
+            <span>Contraseña</span>
+            <input id="passwordInput" name="password" type="password" autocomplete="current-password" required placeholder="••••••••">
+          </label>
+          <p id="loginError" class="form-error" role="alert" hidden></p>
+          <button id="loginButton" class="primary-button" type="submit">Ingresar</button>
+        </form>
+
+        <p class="help-text">Usa la misma cuenta del panel de asistencia. ¿No tienes cuenta? Pídela a coordinación.</p>
+      </div>
+    </section>
+
+    <section id="appView" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <img src="logo-ieruu.png" alt="" width="40" height="46">
+          <div>
+            <p class="eyebrow">IERUU · PAE · CCT</p>
+            <h1>Almuerzo escolar</h1>
+          </div>
+        </div>
+        <div class="account-area">
+          <div class="account-copy">
+            <strong id="userName">—</strong>
+            <span id="userRole" class="role-pill">—</span>
+          </div>
+          <button id="logoutButton" class="secondary-button" type="button">Salir</button>
+        </div>
+      </header>
+
+      <section class="toolbar" aria-label="Buscar y herramientas">
+        <label class="search-field" for="searchInput">
+          <span class="visually-hidden">Buscar estudiante</span>
+          <input id="searchInput" type="search" autocomplete="off" enterkeyhint="done" placeholder="Buscar por nombre, matrícula o chip…">
+        </label>
+        <button id="statsButton" class="secondary-button stats-button" type="button">Informes y Excel</button>
+        <button id="calendarButton" class="secondary-button stats-button" type="button">Días sin clases</button>
+        <button id="manageButton" class="secondary-button stats-button" type="button" hidden>Beneficiarios</button>
+      </section>
+      <p id="searchHint" class="search-hint">Consejo: escribe parte del nombre y pulsa <kbd>Enter</kbd>; si hay un solo resultado, queda marcado como «asistió al almuerzo». Tecla <kbd>/</kbd> para buscar.</p>
+
+      <section class="day-bar" aria-label="Día del almuerzo">
+        <div class="day-copy">
+          <span class="section-label">Día del almuerzo</span>
+          <strong id="dayLabel">—</strong>
+          <span id="dayStateLabel" class="state-pill state-empty">—</span>
+        </div>
+        <div id="dayControls" class="day-controls" hidden>
+          <button id="dayPrev" class="icon-button" type="button" aria-label="Día anterior">‹</button>
+          <label class="visually-hidden" for="dayInput">Elegir día</label>
+          <input id="dayInput" type="date">
+          <button id="dayNext" class="icon-button" type="button" aria-label="Día siguiente">›</button>
+          <button id="dayToday" class="small-button" type="button">Hoy</button>
+        </div>
+      </section>
+
+      <p id="syncStatus" class="sync-status" role="status" aria-live="polite">Conectando…</p>
+      <p id="dataWarning" class="data-warning" role="alert" hidden></p>
+
+      <nav id="groupPicker" class="group-picker" aria-label="Elige un grupo"></nav>
+
+      <section id="groupPanel" class="group-panel" aria-labelledby="activeGroupTitle">
+        <header class="group-panel-header">
+          <div>
+            <p id="activeGroupLabel" class="section-label">Grupo</p>
+            <h2 id="activeGroupTitle">Grupo 6.1</h2>
+            <p id="activeGroupCount" class="group-count">0 beneficiarios</p>
+          </div>
+          <div class="group-actions">
+            <button id="addBeneficiaryButton" class="secondary-button" type="button" hidden>Añadir beneficiario</button>
+            <button id="groupExcelButton" class="primary-button" type="button" title="Descarga la planilla de este mes del grupo con el formato del listado del colegio">Descargar Excel del mes</button>
+          </div>
+        </header>
+
+        <section id="summarySection" class="lunch-summary" aria-label="Resumen del día">
+          <article class="lunch-stat stat-ok"><span>Almorzaron</span><strong id="summaryAsistio">0</strong></article>
+          <article class="lunch-stat stat-missing"><span id="summaryMissingLabel">Faltan</span><strong id="summaryMissing">0</strong></article>
+          <article class="lunch-stat"><span>Beneficiarios</span><strong id="summaryTotal">0</strong></article>
+          <div class="lunch-progress" aria-hidden="true"><span id="summaryBar"></span></div>
+        </section>
+        <p id="dayNotice" class="no-class-notice" hidden></p>
+
+        <div id="listFilters" class="list-filters" role="group" aria-label="Mostrar">
+          <label class="chip"><input type="radio" name="listFilter" value="todos" checked><span id="filterAllLabel">Todos</span></label>
+          <label class="chip"><input type="radio" name="listFilter" value="faltan"><span id="filterMissingLabel">Faltan</span></label>
+          <label class="chip"><input type="radio" name="listFilter" value="almorzaron"><span id="filterDoneLabel">Almorzaron</span></label>
+        </div>
+
+        <div id="lunchList" class="lunch-list" aria-live="off"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- Aviso breve tras marcar un almuerzo, con «Deshacer». -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+    <span id="toastText"></span>
+    <button id="toastUndo" class="toast-undo" type="button" hidden>Deshacer</button>
+  </div>
+
+  <!-- Añadir o editar un beneficiario (directivo y administrador). -->
+  <dialog id="beneficiaryDialog" class="app-dialog" aria-labelledby="beneficiaryDialogTitle">
+    <form id="beneficiaryForm" class="stack-form" novalidate>
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Beneficiarios del PAE</p>
+          <h2 id="beneficiaryDialogTitle">Añadir beneficiario</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="beneficiaryDialog" aria-label="Cerrar">×</button>
+      </div>
+      <div class="form-grid">
+        <label>
+          <span>Matrícula</span>
+          <input id="beneficiaryMatriculaInput" type="text" required maxlength="20" inputmode="numeric" autocapitalize="characters" spellcheck="false" placeholder="Ejemplo: 241081">
+        </label>
+        <label>
+          <span>Grupo</span>
+          <select id="beneficiaryGroupInput" required></select>
+        </label>
+      </div>
+      <label>
+        <span>Nombre completo (como en el listado oficial)</span>
+        <input id="beneficiaryNameInput" type="text" required maxlength="120" placeholder="APELLIDOS NOMBRES">
+      </label>
+      <div class="form-grid">
+        <label>
+          <span>Estado</span>
+          <input id="beneficiaryEstadoInput" type="text" list="estadoOptions" required maxlength="40" value="ALMUERZO">
+        </label>
+        <label>
+          <span>Recibe almuerzo desde</span>
+          <input id="beneficiaryDesdeInput" type="date">
+        </label>
+      </div>
+      <datalist id="estadoOptions">
+        <option value="ALMUERZO"></option>
+      </datalist>
+      <label>
+        <span>Chip (código UID, opcional)</span>
+        <input id="beneficiaryChipInput" type="text" maxlength="32" autocapitalize="characters" spellcheck="false" placeholder="Ejemplo: 5AD56CAD1D4187">
+        <small class="field-hint">El lector del restaurante lo muestra al pasar un chip no vinculado («Copiar código»). Déjalo vacío si el estudiante no tiene chip: se marca a mano.</small>
+      </label>
+      <p id="beneficiaryHint" class="help-text"></p>
+      <p id="beneficiaryError" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions dialog-actions-spread">
+        <button id="removeBeneficiaryButton" class="danger-button" type="button" hidden>Quitar del PAE</button>
+        <span class="dialog-spacer"></span>
+        <button class="secondary-button" type="button" data-close-dialog="beneficiaryDialog">Cancelar</button>
+        <button id="saveBeneficiaryButton" class="primary-button" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Herramientas de directivo y administrador: importar el listado, vincular chips y hora de cierre. -->
+  <dialog id="manageDialog" class="app-dialog app-dialog-wide" aria-labelledby="manageDialogTitle">
+    <div class="manage-content">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Beneficiarios del PAE</p>
+          <h2 id="manageDialogTitle">Listados, chips y horario</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="manageDialog" aria-label="Cerrar">×</button>
+      </div>
+
+      <section class="manage-section" aria-labelledby="importTitle">
+        <h3 id="importTitle">1. Importar el listado oficial</h3>
+        <p class="help-text">Copia las filas del «Listado de grupo con número de orden» desde Excel (o el PDF) y pégalas aquí. Columnas: <strong>Matrícula, Estudiante</strong> y, si las tienes, <strong>Estado</strong> y <strong>Grupo</strong>. El orden en que las pegues es el número de orden de la planilla. Si una matrícula ya existe, se actualiza su nombre, estado y grupo (conserva su chip).</p>
+        <div class="form-grid">
+          <label>
+            <span>Grupo (si la lista no trae columna de grupo)</span>
+            <select id="importGroupInput"></select>
+          </label>
+          <label>
+            <span>Reciben almuerzo desde (opcional)</span>
+            <input id="importDesdeInput" type="date">
+          </label>
+        </div>
+        <label>
+          <span>Filas copiadas</span>
+          <textarea id="importText" rows="7" spellcheck="false" placeholder="241081	ALVAREZ CUREQUIA ANDREA	ALMUERZO&#10;221096	DAVILA BOTERO MATHIAS	ALMUERZO"></textarea>
+        </label>
+        <p id="importSummary" class="calendar-summary" aria-live="polite"></p>
+        <ul id="importErrors" class="import-errors"></ul>
+        <div class="dialog-actions">
+          <button id="importButton" class="primary-button" type="button" disabled>Importar</button>
+        </div>
+      </section>
+
+      <section class="manage-section" aria-labelledby="chipsTitle">
+        <h3 id="chipsTitle">2. Vincular chips automáticamente</h3>
+        <p class="help-text">Busca la tarjeta de cada beneficiario sin chip entre las fichas del sistema de llegadas tarde (mismo nombre y grupo). Revisa la lista antes de vincular; las coincidencias parciales vienen sin marcar.</p>
+        <div class="dialog-actions dialog-actions-start">
+          <button id="chipSearchButton" class="secondary-button" type="button">Buscar coincidencias</button>
+        </div>
+        <p id="chipSummary" class="calendar-summary" aria-live="polite"></p>
+        <ul id="chipMatches" class="chip-matches"></ul>
+        <div class="dialog-actions">
+          <button id="chipLinkButton" class="primary-button" type="button" hidden>Vincular seleccionados</button>
+        </div>
+      </section>
+
+      <section class="manage-section" aria-labelledby="cierreTitle">
+        <h3 id="cierreTitle">3. Hora de cierre del almuerzo</h3>
+        <p class="help-text">Desde esta hora, quien no tiene registro de hoy (ni con chip ni a mano) queda como <strong>«no asistió al almuerzo»</strong> en el panel y en el Excel. Antes de esa hora aparece como «sin registro».</p>
+        <form id="cierreForm" class="cierre-form" novalidate>
+          <label>
+            <span class="visually-hidden">Hora de cierre</span>
+            <input id="cierreInput" type="time" step="60" required>
+          </label>
+          <button id="cierreSave" class="primary-button" type="submit">Guardar hora</button>
+        </form>
+        <p id="cierreStatus" class="calendar-summary" aria-live="polite"></p>
+      </section>
+    </div>
+  </dialog>
+
+  <!-- Disponible para todos los roles. -->
+  <dialog id="statsDialog" class="app-dialog app-dialog-wide stats-dialog" aria-labelledby="statsDialogTitle">
+    <div class="stats-content">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Almuerzo PAE</p>
+          <h2 id="statsDialogTitle">Informes y Excel</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="statsDialog" aria-label="Cerrar">×</button>
+      </div>
+
+      <form id="statsForm" class="stats-form" novalidate>
+        <fieldset class="period-fieldset">
+          <legend>1. Elige el periodo</legend>
+          <div class="period-chips">
+            <label class="chip"><input type="radio" name="statsPeriod" value="hoy"><span>Hoy</span></label>
+            <label class="chip"><input type="radio" name="statsPeriod" value="semana"><span>Esta semana</span></label>
+            <label class="chip"><input type="radio" name="statsPeriod" value="mes" checked><span>Este mes</span></label>
+            <label class="chip"><input type="radio" name="statsPeriod" value="mes-anterior"><span>Mes anterior</span></label>
+            <label class="chip"><input type="radio" name="statsPeriod" value="dia"><span>Otro día</span></label>
+            <label class="chip"><input type="radio" name="statsPeriod" value="semana-de"><span>Otra semana</span></label>
+            <label class="chip"><input type="radio" name="statsPeriod" value="mes-de"><span>Otro mes</span></label>
+            <label class="chip"><input type="radio" name="statsPeriod" value="rango"><span>Rango de fechas</span></label>
+          </div>
+          <div class="period-pickers">
+            <label id="statsDayField" class="filter-field" hidden>
+              <span>Día</span>
+              <input id="statsDayInput" type="date">
+            </label>
+            <label id="statsWeekField" class="filter-field" hidden>
+              <span>Cualquier día de la semana (lunes a domingo)</span>
+              <input id="statsWeekInput" type="date">
+            </label>
+            <label id="statsMonthField" class="filter-field" hidden>
+              <span>Mes</span>
+              <select id="statsMonthInput"></select>
+            </label>
+            <div id="statsRangeField" class="date-pair" hidden>
+              <label class="filter-field">
+                <span>Desde</span>
+                <input id="statsFromInput" type="date">
+              </label>
+              <label class="filter-field">
+                <span>Hasta</span>
+                <input id="statsToInput" type="date">
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="period-fieldset">
+          <legend>2. Grupo y jornada</legend>
+          <div class="stats-filter-grid">
+            <label class="filter-field">
+              <span>Grupo</span>
+              <select id="statsGroupInput"></select>
+            </label>
+            <label class="filter-field">
+              <span>Jornada (sale en la planilla)</span>
+              <input id="statsJornadaInput" type="text" maxlength="30">
+            </label>
+            <div class="filter-field stats-refresh">
+              <span aria-hidden="true">&nbsp;</span>
+              <button id="statsRefreshButton" class="small-button" type="button">Actualizar</button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+
+      <p id="statsRangeLabel" class="record-info" role="status" aria-live="polite">—</p>
+
+      <section class="stats-cards" aria-label="Resumen del periodo">
+        <article class="summary-card"><span>Almorzaron (✓)</span><strong id="statsAsistio">—</strong></article>
+        <article class="summary-card"><span>No asistieron (X)</span><strong id="statsNoAsistio">—</strong></article>
+        <article class="summary-card"><span>Beneficiarios</span><strong id="statsBeneficiarios">—</strong></article>
+        <article class="summary-card"><span>% de asistencia</span><strong id="statsRate">—</strong></article>
+      </section>
+
+      <section class="stats-section" aria-labelledby="statsGroupsTitle">
+        <h3 id="statsGroupsTitle">Por grupo</h3>
+        <div class="table-scroll">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th scope="col">Grupo</th>
+                <th scope="col" class="numeric">Beneficiarios</th>
+                <th scope="col" class="numeric">Almorzaron</th>
+                <th scope="col" class="numeric">Con chip</th>
+                <th scope="col" class="numeric">A mano</th>
+                <th scope="col" class="numeric">No asistieron</th>
+                <th scope="col" class="numeric">% asistencia</th>
+              </tr>
+            </thead>
+            <tbody id="statsGroupTableBody"></tbody>
+            <tfoot id="statsGroupTableFoot"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section id="statsPreviewSection" class="stats-section" aria-labelledby="statsPreviewTitle" hidden>
+        <h3 id="statsPreviewTitle">Planilla del grupo</h3>
+        <p class="help-text">✓ asistió al almuerzo · X no asistió · gris: no hubo clase o no hubo servicio · en blanco: el día aún no termina.</p>
+        <div id="statsPreview" class="table-scroll planilla-scroll"></div>
+      </section>
+
+      <section class="stats-export" aria-label="Descargar en Excel">
+        <p>3. Descarga la planilla con el formato del «Listado de grupo con número de orden»: una hoja por grupo, más el resumen y el detalle de cada registro.</p>
+        <button id="statsExportButton" class="primary-button" type="button">Descargar Excel (.xlsx)</button>
+        <p id="statsExportStatus" class="sync-status" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+  </dialog>
+
+  <!-- Días sin clases: todos los roles los ven; directivo y administrador los marcan o quitan. -->
+  <dialog id="calendarDialog" class="app-dialog app-dialog-wide" aria-labelledby="calendarDialogTitle">
+    <div class="calendar-content">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Calendario escolar</p>
+          <h2 id="calendarDialogTitle">Días sin clases</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="calendarDialog" aria-label="Cerrar">×</button>
+      </div>
+      <p class="record-info">En los días marcados no se registran almuerzos ni se marca a nadie como «no asistió», el lector del restaurante muestra que no hay clases y la planilla deja esa columna en gris («No hubo clase»). Úsalo para vacaciones, semanas de receso, festivos o jornadas sin estudiantes. Los días que se marcan en el panel de llegadas tarde también cuentan aquí.</p>
+
+      <div class="calendar-layout">
+        <section class="calendar-picker" aria-labelledby="calendarMonthLabel">
+          <div class="calendar-nav">
+            <button id="calendarPrev" class="icon-button" type="button" aria-label="Mes anterior">‹</button>
+            <h3 id="calendarMonthLabel">—</h3>
+            <button id="calendarNext" class="icon-button" type="button" aria-label="Mes siguiente">›</button>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+          </div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+          <div class="calendar-legend" aria-hidden="true">
+            <span class="legend-item legend-off">Todos sin clases</span>
+            <span class="legend-item legend-partial">Algunos grupos</span>
+            <span class="legend-item legend-selected">Selección</span>
+            <span class="legend-item legend-today">Hoy</span>
+          </div>
+        </section>
+
+        <form id="calendarForm" class="stack-form calendar-form" novalidate>
+          <h3>Marcar días sin clases</h3>
+          <p class="field-hint">Toca en el calendario el primer día y luego el último. Para un solo día, tócalo una vez.</p>
+          <div class="date-pair">
+            <label>
+              <span>Desde</span>
+              <input id="calendarFrom" type="date" required>
+            </label>
+            <label>
+              <span>Hasta</span>
+              <input id="calendarTo" type="date" required>
+            </label>
+          </div>
+          <fieldset class="choice-fieldset">
+            <legend>¿Quiénes no tienen clase?</legend>
+            <div class="choice-row choice-row-two">
+              <label class="choice"><input type="radio" name="calendarScope" value="todos" checked><span>Todos los grupos</span></label>
+              <label class="choice"><input type="radio" name="calendarScope" value="algunos"><span>Solo algunos grupos</span></label>
+            </div>
+            <div id="calendarGroups" class="calendar-groups" hidden></div>
+          </fieldset>
+          <label>
+            <span>Motivo</span>
+            <input id="calendarReason" type="text" list="calendarReasons" maxlength="120" required placeholder="Ej.: Festivo">
+          </label>
+          <datalist id="calendarReasons">
+            <option value="Festivo"></option>
+            <option value="Vacaciones"></option>
+            <option value="Semana de receso escolar"></option>
+            <option value="Jornada pedagógica (sin estudiantes)"></option>
+            <option value="Día de la familia"></option>
+            <option value="Suspensión de clases"></option>
+            <option value="No llegó el servicio de alimentación"></option>
+          </datalist>
+          <p id="calendarSummary" class="calendar-summary" role="status" aria-live="polite"></p>
+          <p id="calendarError" class="form-error" role="alert" hidden></p>
+          <div class="dialog-actions">
+            <button id="calendarClear" class="secondary-button" type="button">Limpiar</button>
+            <button id="calendarSave" class="primary-button" type="submit">Guardar días sin clases</button>
+          </div>
+        </form>
+      </div>
+
+      <section class="calendar-periods" aria-labelledby="calendarListTitle">
+        <h3 id="calendarListTitle">Días sin clases registrados</h3>
+        <ul id="calendarList" class="calendar-list"></ul>
+      </section>
+    </div>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
